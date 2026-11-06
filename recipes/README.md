@@ -308,6 +308,23 @@ RAM. A higher budget can fail vLLM's free-memory check on a worker before
 weights load, leaving the head with a Gloo peer-disconnect error. Override with
 `--gpu-mem VALUE` only when every node has enough free memory at startup.
 
+The Vision recipe also sets `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0` and
+applies `mods/kv-cache-prealloc-cleanup`. Since vLLM v0.21.0, CUDA graph
+memory profiling is on by default and subtracts its graph-pool estimate from
+the KV budget, so `0.8` behaves like `~0.79` and can abort startup near graph
+capture with a KV-cache size error that suggests raising utilization
+(e.g. to `0.81`). Current upstream and B12X vLLM builds gate that subtraction
+on the env var natively; the mod brings the same skip to older containers. If
+startup still reports a KV-cache shortfall, launch with `--gpu-mem 0.85` on
+nodes that have the free memory.
+
+A separate capture-time failure class reported on older B12X images corrupts
+logits (token-level garbage after long decodes) or dies in `cudaGraphLaunch`
+when TP all-reduce is captured inside the graph; `--enforce-eager` stays
+coherent. This is a graph-interaction bug in the image's B12X/PyNCCL stack,
+not a recipe setting: update the image first, and use `--enforce-eager` only
+to confirm the interaction before reporting.
+
 The Qwen3.8 Flash Next cluster recipe includes
 `--additional-config '{"ple_table_memory":"device"}'` in its command, so a
 normal recipe launch allocates PLE tables on the GPU. This explicit setting

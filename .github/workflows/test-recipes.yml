@@ -96,6 +96,9 @@ jobs:
         python3 tests/test_memory_profile_mod.py
         python3 tests/test_memory_capacity.py
 
+    - name: Test KV cache prealloc cleanup mod
+      run: bash tests/test_kv_cache_prealloc_cleanup_mod.sh
+
     - name: Run recipe integration tests
       run: |
         python3 tests/test_run_recipe.py

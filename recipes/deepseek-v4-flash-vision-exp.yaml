@@ -13,7 +13,10 @@ build_args:
 
 cluster_only: true
 
-mods: []
+mods:
+  # Brings the VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0 skip to containers
+  # whose vLLM does not gate it natively (current B12X builds already do).
+  - mods/kv-cache-prealloc-cleanup
 #  - mods/instanttensor-hybrid-draft-loader
 #   - mods/drop-caches
 
@@ -35,7 +38,17 @@ env:
   VLLM_USE_AOT_COMPILE: "1"
   VLLM_USE_BREAKABLE_CUDAGRAPH: "0"
   VLLM_USE_MEGA_AOT_ARTIFACT: "1"
+  # Legacy B12X kernel toggles from the pre-FlashInfer B12X build (the old
+  # dev/gilded-gnosis fork branch plus the standalone b12x package). The
+  # current dev/karmic-kraken-based image ignores them; B12X backends are
+  # selected there via custom_ops and the speculative-config attention
+  # backend. Kept so the recipe still works against pinned older images.
   VLLM_MEMORY_PROFILE_INCLUDE_ATTN: "1"
+  # vLLM >= 0.21 subtracts its CUDA-graph pool estimate from the KV budget,
+  # making gpu_memory_utilization 0.8 behave like ~0.79 and failing KV-cache
+  # init on dual Sparks during graph capture. Skip that accounting so the
+  # 0.8 budget (kept low for shared-RAM headroom) applies fully.
+  VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS: "0"
   VLLM_USE_FLASHINFER_SAMPLER: "1"
   VLLM_USE_B12X_WO_PROJECTION: "1"
   VLLM_USE_B12X_MHC: "1"
